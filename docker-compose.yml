@@ -1,0 +1,37 @@
+version: '3.7'
+services:
+  project_common:
+    image: airflow_docker_project_common:latest
+    build: ./project_common
+    restart: 'no'
+    entrypoint: '/bin/true'
+
+  project_simple:
+    image: airflow_docker_project_simple:latest
+    build: ./project_simple
+    restart: 'no'
+    entrypoint: '/bin/true'
+
+  project_complex:
+    image: airflow_docker_project_complex:latest
+    build: ./project_complex
+    restart: 'no'
+    entrypoint: '/bin/true'
+
+  ####
+
+  postgres:
+    image: postgres:11
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow_pwd
+      - POSTGRES_DB=airflow
+
+  # XXX scheduler + migrations + initdb
+  # XXX web
+  # XXX workers
+
+  airflow_scheduler:
+    image: airflow_docker_airflow:latest
+    build: ./airflow
+    command: '/bin/true'  # XXX

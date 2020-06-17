@@ -1,0 +1,24 @@
+dags:
+  project_simple_echo:
+    args:
+      catchup: False
+      schedule_interval: 1m
+      start_date: 2020-01-01T00:00:00+03:00
+      tags:
+        - project_simple
+      default_args:
+        owner: project_simple
+        queue: default
+    operators:
+      echo:
+        class: airflow.operators.docker_operator:DockerOperator
+        args:
+          image: airflow_docker_project_simple:latest
+          auto_remove: true
+          user: '1000:1000'
+          command:
+            - project_simple.echo
+            - "--execution_date={{ execution_date.isoformat() }}"
+            - EchoTask
+            - "--i1=7"
+            - "--i2=1"

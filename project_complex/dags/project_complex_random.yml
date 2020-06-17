@@ -1,0 +1,46 @@
+dags:
+  project_complex_random:
+    args:
+      catchup: False
+      schedule_interval: '* * * * *'
+      start_date: 2020-01-01T00:00:00+03:00
+      tags:
+        - project_complex
+      default_args:
+        execution_timeout: 1h
+        owner: project_complex
+        queue: default
+    operators:
+      multiply_in_bash:
+        class: airflow.operators.docker_operator:DockerOperator
+        args:
+          image: airflow_docker_project_complex:latest
+          auto_remove: true
+          command:
+            - multiply_in_bash
+            - 5
+            - 10
+      random_sensor:
+        class: airflow.operators.docker_operator:DockerOperator
+        args:
+          image: airflow_docker_project_complex:latest
+          auto_remove: true
+          command:
+            - project_complex.random_sensor
+            - "--execution_date={{ execution_date.isoformat() }}"
+            - RandomSensor
+            - "--probability=0.5"
+      random_task:
+        class: airflow.operators.docker_operator:DockerOperator
+        args:
+          image: airflow_docker_project_complex:latest
+          auto_remove: true
+          command:
+            - project_complex.random_task
+            - "--execution_date={{ execution_date.isoformat() }}"
+            - RandomFailTask
+            - "--probability=0.5"
+            - "--sleep_interval=10s"
+    flow:
+      random_sensor:
+      - random_task
