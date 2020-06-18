@@ -1,0 +1,24 @@
+From e0909117d926a9a678724a1321b93a5937fae0c6 Mon Sep 17 00:00:00 2001
+From: Kostya Esmukov <kostya@esmukov.ru>
+Date: Sun, 24 Nov 2019 19:08:31 +0300
+Subject: [PATCH 2/9] Add `environ` to the jinja2 template context
+
+---
+ airflow/models/taskinstance.py | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/airflow/models/taskinstance.py b/airflow/models/taskinstance.py
+index d36126148..d0354e9de 100644
+--- a/airflow/models/taskinstance.py
++++ b/airflow/models/taskinstance.py
+@@ -1388,6 +1388,7 @@ class TaskInstance(Base, LoggingMixin):
+             },
+             'inlets': task.inlets,
+             'outlets': task.outlets,
++            'environ': os.environ,
+         }
+ 
+     def get_rendered_template_fields(self):
+-- 
+2.25.0
+

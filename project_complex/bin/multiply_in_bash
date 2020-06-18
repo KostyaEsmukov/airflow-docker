@@ -1,3 +1,9 @@
 #!/bin/bash
 
-exec expr "$1" '*' "$2"
+set -euxo pipefail
+
+echo expr "$1" '*' "$2"
+expr "$1" '*' "$2"
+
+# XXX Why does it not print anything to the log???
+sleep 10

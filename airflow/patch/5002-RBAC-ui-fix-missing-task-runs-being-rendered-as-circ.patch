@@ -1,0 +1,26 @@
+From c63f03a0df6bf9da6de09e2efc3ad3bdba5bfb3c Mon Sep 17 00:00:00 2001
+From: Kostya Esmukov <kostya@esmukov.ru>
+Date: Sat, 11 Apr 2020 17:26:15 +0300
+Subject: [PATCH] RBAC ui: fix missing task runs being rendered as circles
+ instead of squares
+
+---
+ airflow/www_rbac/templates/airflow/tree.html | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/airflow/www_rbac/templates/airflow/tree.html b/airflow/www_rbac/templates/airflow/tree.html
+index 237ead3f6..627091ae5 100644
+--- a/airflow/www_rbac/templates/airflow/tree.html
++++ b/airflow/www_rbac/templates/airflow/tree.html
+@@ -88,7 +88,7 @@ function ts_to_dtstr(ts) {
+ }
+ 
+ function is_dag_run(d) {
+-  return d.operator === undefined;
++  return d.run_id != undefined;
+ }
+ 
+ var now_ts = Date.now()/1000;
+-- 
+2.25.0
+

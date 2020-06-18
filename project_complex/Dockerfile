@@ -77,7 +77,7 @@ RUN set -ex \
     && PREFIX="`python3 -c 'import sys; print(sys.prefix.rstrip("/"))'`" \
     && DAGS="$PREFIX/airflow/dags" \
     && cd "$DAGS" \
-    && tar cf /dags.tar ./ \
+    && tar --exclude='__pycache__' -cf /dags.tar ./ \
     && rm -Rf /app \
     && rm -rf ~/.cache/pip /tmp/pip-build* \
     && apt-get clean \

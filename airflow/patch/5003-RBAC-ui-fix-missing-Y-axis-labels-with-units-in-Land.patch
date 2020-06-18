@@ -1,0 +1,39 @@
+From d582e5a0718a9b46b0561c7a0555f73410d82532 Mon Sep 17 00:00:00 2001
+From: Kostya Esmukov <kostya@esmukov.ru>
+Date: Sat, 11 Apr 2020 17:14:29 +0300
+Subject: [PATCH] RBAC ui: fix missing Y-axis labels with units in Landing
+ Times and Task Duration plots
+
+---
+ airflow/www_rbac/views.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/airflow/www_rbac/views.py b/airflow/www_rbac/views.py
+index 722fbf547..bfe3ae6e0 100644
+--- a/airflow/www_rbac/views.py
++++ b/airflow/www_rbac/views.py
+@@ -1716,10 +1716,10 @@ class Airflow(AirflowBaseView):
+         # update the y Axis on both charts to have the correct time units
+         chart.create_y_axis('yAxis', format='.02f', custom_format=False,
+                             label='Duration ({})'.format(y_unit))
+-        chart.axislist['yAxis']['axisLabelDistance'] = '40'
++        chart.axislist['yAxis']['axisLabelDistance'] = '-15'
+         cum_chart.create_y_axis('yAxis', format='.02f', custom_format=False,
+                                 label='Duration ({})'.format(cum_y_unit))
+-        cum_chart.axislist['yAxis']['axisLabelDistance'] = '40'
++        cum_chart.axislist['yAxis']['axisLabelDistance'] = '-15'
+ 
+         for task in dag.tasks:
+             if x[task.task_id]:
+@@ -1873,7 +1873,7 @@ class Airflow(AirflowBaseView):
+         # update the y Axis to have the correct time units
+         chart.create_y_axis('yAxis', format='.02f', custom_format=False,
+                             label='Landing Time ({})'.format(y_unit))
+-        chart.axislist['yAxis']['axisLabelDistance'] = '40'
++        chart.axislist['yAxis']['axisLabelDistance'] = '-15'
+         for task in dag.tasks:
+             if x[task.task_id]:
+                 chart.add_serie(name=task.task_id, x=x[task.task_id],
+-- 
+2.25.0
+

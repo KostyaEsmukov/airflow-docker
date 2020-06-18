@@ -1,0 +1,25 @@
+From 7926cf3e522156c8223fa7031f5a8dbd6f3cb096 Mon Sep 17 00:00:00 2001
+From: Kostya Esmukov <kostya@esmukov.ru>
+Date: Tue, 18 Feb 2020 23:27:57 +0300
+Subject: [PATCH 4/9] Docker Operator: add `volumes` to `template_fields`
+
+---
+ airflow/operators/docker_operator.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/airflow/operators/docker_operator.py b/airflow/operators/docker_operator.py
+index 47ec3762f..b189b2034 100644
+--- a/airflow/operators/docker_operator.py
++++ b/airflow/operators/docker_operator.py
+@@ -124,7 +124,7 @@ class DockerOperator(BaseOperator):
+         This needs to be set see logs of the Docker container.
+     :type tty: bool
+     """
+-    template_fields = ('command', 'environment', 'container_name')
++    template_fields = ('command', 'environment', 'container_name', 'volumes')
+     template_ext = tuple()
+ 
+     @apply_defaults
+-- 
+2.25.0
+

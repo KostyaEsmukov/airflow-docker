@@ -1,0 +1,182 @@
+From c3567fd9b50b009ad93ef68d9f1720c08c815ddd Mon Sep 17 00:00:00 2001
+From: Kaxil Naik <kaxilnaik@gmail.com>
+Date: Thu, 9 Apr 2020 19:45:11 +0100
+Subject: [PATCH] Move DAG._schedule_interval logic out of DAG.__init__ (#8225)
+
+closes https://github.com/apache/airflow/issues/8166
+# Conflicts:
+#	airflow/models/dag.py
+#	airflow/models/dagbag.py
+#	tests/models/test_dag.py
+---
+ airflow/jobs/scheduler_job.py  |  2 +-
+ airflow/models/baseoperator.py |  2 +-
+ airflow/models/dag.py          | 46 +++++++++++++++++++++-------------
+ airflow/models/dagbag.py       |  4 +--
+ 4 files changed, 33 insertions(+), 21 deletions(-)
+
+diff --git a/airflow/jobs/scheduler_job.py b/airflow/jobs/scheduler_job.py
+index 229d5baa8..1dd986ea3 100644
+--- a/airflow/jobs/scheduler_job.py
++++ b/airflow/jobs/scheduler_job.py
+@@ -450,7 +450,7 @@ class SchedulerJob(BaseJob):
+         # This is a temporary fix for 1.10.4 release.
+         # Background: AIRFLOW-4297
+         # TODO: refactor manage_slas() to handle related issues.
+-        if dag._schedule_interval is None:
++        if dag.normalized_schedule_interval is None:
+             self.log.info("SLA check for DAGs with schedule_interval 'None'/'@once' are "
+                           "skipped in 1.10.4, due to related refactoring going on.")
+             return
+diff --git a/airflow/models/baseoperator.py b/airflow/models/baseoperator.py
+index 6abf9c128..828fdb15f 100644
+--- a/airflow/models/baseoperator.py
++++ b/airflow/models/baseoperator.py
+@@ -584,7 +584,7 @@ class BaseOperator(LoggingMixin):
+         schedule_interval as it may not be attached to a DAG.
+         """
+         if self.has_dag():
+-            return self.dag._schedule_interval
++            return self.dag.normalized_schedule_interval
+         else:
+             return self._schedule_interval
+ 
+diff --git a/airflow/models/dag.py b/airflow/models/dag.py
+index 54521aba3..6963f8931 100644
+--- a/airflow/models/dag.py
++++ b/airflow/models/dag.py
+@@ -299,12 +299,6 @@ class DAG(BaseDag, LoggingMixin):
+             )
+ 
+         self.schedule_interval = schedule_interval
+-        if isinstance(schedule_interval, six.string_types) and schedule_interval in cron_presets:
+-            self._schedule_interval = cron_presets.get(schedule_interval)  # type: Optional[ScheduleInterval]
+-        elif schedule_interval == '@once':
+-            self._schedule_interval = None
+-        else:
+-            self._schedule_interval = schedule_interval
+         if isinstance(template_searchpath, six.string_types):
+             template_searchpath = [template_searchpath]
+         self.template_searchpath = template_searchpath
+@@ -389,7 +383,7 @@ class DAG(BaseDag, LoggingMixin):
+             end_date = None
+         return utils_date_range(
+             start_date=start_date, end_date=end_date,
+-            num=num, delta=self._schedule_interval)
++            num=num, delta=self.normalized_schedule_interval)
+ 
+     def is_fixed_time_schedule(self):
+         """
+@@ -398,7 +392,7 @@ class DAG(BaseDag, LoggingMixin):
+         :return: True if the schedule has a fixed time, False if not.
+         """
+         now = datetime.now()
+-        cron = croniter(self._schedule_interval, now)
++        cron = croniter(self.normalized_schedule_interval, now)
+ 
+         start = cron.get_next(datetime)
+         cron_next = cron.get_next(datetime)
+@@ -415,12 +409,12 @@ class DAG(BaseDag, LoggingMixin):
+         :param dttm: utc datetime
+         :return: utc datetime
+         """
+-        if isinstance(self._schedule_interval, six.string_types):
++        if isinstance(self.normalized_schedule_interval, six.string_types):
+             # we don't want to rely on the transitions created by
+             # croniter as they are not always correct
+             dttm = pendulum.instance(dttm)
+             naive = timezone.make_naive(dttm, self.timezone)
+-            cron = croniter(self._schedule_interval, naive)
++            cron = croniter(self.normalized_schedule_interval, naive)
+ 
+             # We assume that DST transitions happen on the minute/hour
+             if not self.is_fixed_time_schedule():
+@@ -433,8 +427,8 @@ class DAG(BaseDag, LoggingMixin):
+                 tz = self.timezone
+                 following = timezone.make_aware(naive, tz)
+             return timezone.convert_to_utc(following)
+-        elif self._schedule_interval is not None:
+-            return dttm + self._schedule_interval
++        elif self.normalized_schedule_interval is not None:
++            return dttm + self.normalized_schedule_interval
+ 
+     def previous_schedule(self, dttm):
+         """
+@@ -443,12 +437,12 @@ class DAG(BaseDag, LoggingMixin):
+         :param dttm: utc datetime
+         :return: utc datetime
+         """
+-        if isinstance(self._schedule_interval, six.string_types):
++        if isinstance(self.normalized_schedule_interval, six.string_types):
+             # we don't want to rely on the transitions created by
+             # croniter as they are not always correct
+             dttm = pendulum.instance(dttm)
+             naive = timezone.make_naive(dttm, self.timezone)
+-            cron = croniter(self._schedule_interval, naive)
++            cron = croniter(self.normalized_schedule_interval, naive)
+ 
+             # We assume that DST transitions happen on the minute/hour
+             if not self.is_fixed_time_schedule():
+@@ -461,8 +455,8 @@ class DAG(BaseDag, LoggingMixin):
+                 tz = self.timezone
+                 previous = timezone.make_aware(naive, tz)
+             return timezone.convert_to_utc(previous)
+-        elif self._schedule_interval is not None:
+-            return dttm - self._schedule_interval
++        elif self.normalized_schedule_interval is not None:
++            return dttm - self.normalized_schedule_interval
+ 
+     def get_run_dates(self, start_date, end_date=None):
+         """
+@@ -645,6 +639,24 @@ class DAG(BaseDag, LoggingMixin):
+         """
+         return self._get_is_paused()
+ 
++    @property
++    def normalized_schedule_interval(self) -> Optional[ScheduleInterval]:
++        """
++        Returns Normalized Schedule Interval. This is used internally by the Scheduler to
++        schedule DAGs.
++
++        1. Converts Cron Preset to a Cron Expression (e.g ``@monthly`` to ``0 0 1 * *``)
++        2. If Schedule Interval is "@once" return "None"
++        3. If not (1) or (2) returns schedule_interval
++        """
++        if isinstance(self.schedule_interval, str) and self.schedule_interval in cron_presets:
++            _schedule_interval = cron_presets.get(self.schedule_interval)  # type: Optional[ScheduleInterval]
++        elif self.schedule_interval == '@once':
++            _schedule_interval = None
++        else:
++            _schedule_interval = self.schedule_interval
++        return _schedule_interval
++
+     @provide_session
+     def handle_callback(self, dagrun, success=True, reason=None, session=None):
+         """
+@@ -1677,7 +1689,7 @@ class DAG(BaseDag, LoggingMixin):
+             cls.__serialized_fields = frozenset(vars(DAG(dag_id='test')).keys()) - {
+                 'parent_dag', '_old_context_manager_dags', 'safe_dag_id', 'last_loaded',
+                 '_full_filepath', 'user_defined_filters', 'user_defined_macros',
+-                '_schedule_interval', 'partial', '_old_context_manager_dags',
++                'partial', '_old_context_manager_dags',
+                 '_pickle_id', '_log', 'is_subdag', 'task_dict', 'template_searchpath',
+                 'sla_miss_callback', 'on_success_callback', 'on_failure_callback',
+                 'template_undefined', 'jinja_environment_kwargs'
+diff --git a/airflow/models/dagbag.py b/airflow/models/dagbag.py
+index 189547df9..72c0b0c33 100644
+--- a/airflow/models/dagbag.py
++++ b/airflow/models/dagbag.py
+@@ -296,8 +296,8 @@ class DagBag(BaseDagBag, LoggingMixin):
+                     try:
+                         dag.is_subdag = False
+                         self.bag_dag(dag, parent_dag=dag, root_dag=dag)
+-                        if isinstance(dag._schedule_interval, six.string_types):
+-                            croniter(dag._schedule_interval)
++                        if isinstance(dag.normalized_schedule_interval, six.string_types):
++                            croniter(dag.normalized_schedule_interval)
+                         found_dags.append(dag)
+                         found_dags += dag.subdags
+                     except (CroniterBadCronError,
+-- 
+2.25.0
+

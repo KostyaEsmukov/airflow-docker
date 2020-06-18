@@ -6,7 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-dags_path = Path("/var/my_airflow/airflow/dags/dags_folder")
+dags_path = Path("/opt/airflow/dags/")
 group = "airflow"  # "ansible_admin"
 
 
@@ -18,8 +18,13 @@ def ensure_no_dirs(p):
 
 def hash_image(image):
     image_name = image.split(":")[0]
-    *_, user, name = image_name.split("/")
-    return f"{user}_{name}"
+    try:
+        # exclude registry hostname from the hash
+        *_, user, name = image_name.split("/")
+        return f"{user}_{name}"
+    except ValueError:  # not enough values to unpack (expected at least 2, got 1)
+        # No registry hostname in the image name
+        return image_name
 
 
 def main(image):

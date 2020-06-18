@@ -18,8 +18,8 @@ dags:
           auto_remove: true
           command:
             - multiply_in_bash
-            - 5
-            - 10
+            - '5'
+            - '10'
       random_sensor:
         class: airflow.operators.docker_operator:DockerOperator
         args:

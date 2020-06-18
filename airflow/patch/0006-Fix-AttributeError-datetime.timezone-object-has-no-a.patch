@@ -1,0 +1,35 @@
+From b5a85560329b5b3d571b788a59ca8ab6c97a776c Mon Sep 17 00:00:00 2001
+From: Kostya Esmukov <kostya@esmukov.ru>
+Date: Fri, 24 Jan 2020 20:52:26 +0300
+Subject: [PATCH 6/9] Fix `AttributeError: 'datetime.timezone' object has no
+ attribute 'name'`
+
+---
+ airflow/models/dag.py | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/airflow/models/dag.py b/airflow/models/dag.py
+index e0ec1d20d..0f0e7514c 100644
+--- a/airflow/models/dag.py
++++ b/airflow/models/dag.py
+@@ -430,7 +430,7 @@ class DAG(BaseDag, LoggingMixin):
+             else:
+                 # absolute (e.g. 3 AM)
+                 naive = cron.get_next(datetime)
+-                tz = pendulum.timezone(self.timezone.name)
++                tz = self.timezone
+                 following = timezone.make_aware(naive, tz)
+             return timezone.convert_to_utc(following)
+         elif self._schedule_interval is not None:
+@@ -458,7 +458,7 @@ class DAG(BaseDag, LoggingMixin):
+             else:
+                 # absolute (e.g. 3 AM)
+                 naive = cron.get_prev(datetime)
+-                tz = pendulum.timezone(self.timezone.name)
++                tz = self.timezone
+                 previous = timezone.make_aware(naive, tz)
+             return timezone.convert_to_utc(previous)
+         elif self._schedule_interval is not None:
+-- 
+2.25.0
+

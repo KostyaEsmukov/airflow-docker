@@ -1,0 +1,29 @@
+From 7d3a12b65fd2a48850786774a15a4573d95820ce Mon Sep 17 00:00:00 2001
+From: Kostya Esmukov <kostya@esmukov.ru>
+Date: Sat, 8 Feb 2020 17:53:19 +0300
+Subject: [PATCH 8/9] Serialized DAGs: fix pendulum unable to parse `UTC+03:00`
+ timezone
+
+---
+ airflow/serialization/serialized_objects.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/airflow/serialization/serialized_objects.py b/airflow/serialization/serialized_objects.py
+index 3d2029ac8..0c73946e7 100644
+--- a/airflow/serialization/serialized_objects.py
++++ b/airflow/serialization/serialized_objects.py
+@@ -252,6 +252,11 @@ class BaseSerialization:
+ 
+     @classmethod
+     def _deserialize_timezone(cls, name):
++        import re
++        m = re.match(r'^(UTC)?([-+].+)$', name)
++        if m is not None:
++            tz_offset = m.group(2)
++            return pendulum.parse('0001-01-01T00:00:00' + tz_offset).tzinfo
+         return pendulum.timezone(name)
+ 
+     @classmethod
+-- 
+2.25.0
+

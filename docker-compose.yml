@@ -20,18 +20,71 @@ services:
 
   ####
 
+  redis:
+    image: redis
+    networks:
+      - airflownet
+
   postgres:
     image: postgres:11
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow_pwd
       - POSTGRES_DB=airflow
-
-  # XXX scheduler + migrations + initdb
-  # XXX web
-  # XXX workers
+    networks:
+      - airflownet
 
   airflow_scheduler:
     image: airflow_docker_airflow:latest
     build: ./airflow
-    command: '/bin/true'  # XXX
+    networks:
+      - airflownet
+    depends_on:
+      - redis
+      - postgres
+    environment: &airflowenv
+      # python -c "from cryptography.fernet import Fernet; FERNET_KEY = Fernet.generate_key().decode(); print(FERNET_KEY)"
+      FERNET_KEY: bnFprJvPw4ntPMY8GNdlEWjUIR2v7mi60fJcobVDOPA=
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow_pwd@postgres/airflow"
+      AIRFLOW__CELERY__RESULT_BACKEND: "db+postgresql://airflow:airflow_pwd@postgres/airflow"
+      AIRFLOW__CELERY__BROKER_URL: "redis://redis/0"
+      AIRFLOW__WEBSERVER__RBAC: 'True'
+      DOCKER_COMPOSE_MODE: '1'
+    volumes:
+      - ./_dags:/opt/airflow/dags/:ro
+    command: scheduler
+
+  airflow_web:
+    image: airflow_docker_airflow:latest
+    build: ./airflow
+    networks:
+      - airflownet
+    depends_on:
+      - airflow_scheduler
+    environment: *airflowenv
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./_dags:/opt/airflow/dags/:ro
+    command: webserver
+
+  airflow_worker:
+    image: airflow_docker_airflow:latest
+    build: ./airflow
+    networks:
+      - airflownet
+    depends_on:
+      - airflow_scheduler
+    environment: *airflowenv
+    volumes:
+      - ./_dags:/opt/airflow/dags/:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: worker
+
+
+networks:
+  airflownet:
+
+
+# XXX worker logs volume + serve_logs
